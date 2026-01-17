@@ -8,6 +8,8 @@
 #include <chrono>
 #include <random>
 
+#include "Particle.h"
+
 const int height = 600;
 const int width = 600;
 const int screen_width = width;
@@ -28,7 +30,7 @@ const float rest_density = 8.0f;
 const float gas_constant = 200.0f;
 const float damping = 0.6f;
 
-std::string LoadGLSL(const std::string& filename)
+std::string LoadGLSL(const std::string &filename)
 {
     std::ifstream file("GLSL scripts/" + filename);
     if (!file.is_open())
@@ -40,16 +42,20 @@ std::string LoadGLSL(const std::string& filename)
 }
 
 std::string compute = LoadGLSL("shader.glsl");
-std::string vertex  = LoadGLSL("vertex.glsl");
-std::string fragment  = LoadGLSL("fragment.glsl");
+std::string vertex = LoadGLSL("vertex.glsl");
+std::string fragment = LoadGLSL("fragment.glsl");
 
-static GLuint compileShader(GLenum stage, const char* src) {
+static GLuint compileShader(GLenum stage, const char *src)
+{
     GLuint s = glCreateShader(stage);
     glShaderSource(s, 1, &src, nullptr);
     glCompileShader(s);
-    GLint ok = 0; glGetShaderiv(s, GL_COMPILE_STATUS, &ok);
-    if(!ok) {
-        char log[8192]; GLsizei len=0;
+    GLint ok = 0;
+    glGetShaderiv(s, GL_COMPILE_STATUS, &ok);
+    if (!ok)
+    {
+        char log[8192];
+        GLsizei len = 0;
         glGetShaderInfoLog(s, sizeof(log), &len, log);
         std::fprintf(stderr, "Shader compile error:\n%s\n", log);
         std::exit(EXIT_FAILURE);
@@ -57,13 +63,18 @@ static GLuint compileShader(GLenum stage, const char* src) {
     return s;
 }
 
-static GLuint linkProgram(const std::vector<GLuint>& shaders) {
+static GLuint linkProgram(const std::vector<GLuint> &shaders)
+{
     GLuint prog = glCreateProgram();
-    for(auto s : shaders) glAttachShader(prog, s);
+    for (auto s : shaders)
+        glAttachShader(prog, s);
     glLinkProgram(prog);
-    GLint ok=0; glGetProgramiv(prog, GL_LINK_STATUS, &ok);
-    if(!ok) {
-        char log[8192]; GLsizei len=0;
+    GLint ok = 0;
+    glGetProgramiv(prog, GL_LINK_STATUS, &ok);
+    if (!ok)
+    {
+        char log[8192];
+        GLsizei len = 0;
         glGetProgramInfoLog(prog, sizeof(log), &len, log);
         std::fprintf(stderr, "Program link error:\n%s\n", log);
         std::exit(EXIT_FAILURE);
@@ -71,14 +82,10 @@ static GLuint linkProgram(const std::vector<GLuint>& shaders) {
     return prog;
 }
 
-struct Particle {
-    float px, py;
-    float vx = 0.0f, vy = 0.0f;
-    float density;
-};
-
-int main() {
-    if(!glfwInit()) {
+int main()
+{
+    if (!glfwInit())
+    {
         std::fprintf(stderr, "Failed to init GLFW\n");
         return -1;
     }
@@ -87,11 +94,12 @@ int main() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLFWwindow* window = glfwCreateWindow(screen_width, screen_height, "He he he, simulation", nullptr, nullptr);
+    GLFWwindow *window = glfwCreateWindow(screen_width, screen_height, "He he he, simulation", nullptr, nullptr);
 
     glfwMakeContextCurrent(window);
 
-    if(!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+    {
         std::fprintf(stderr, "Failed to initialize GLAD\n");
         return -1;
     }
@@ -108,19 +116,13 @@ int main() {
     GLuint fs = compileShader(GL_FRAGMENT_SHADER, fragment.c_str());
     std::cout << "Finished compiling fragment shader" << std::endl;
     GLuint renderProg = linkProgram({vs, fs});
-    glDeleteShader(vs); glDeleteShader(fs);
+    glDeleteShader(vs);
+    glDeleteShader(fs);
 
     // Particles Setup
-    std::vector<Particle> particles;
-    particles.resize(num_particles);
-    
-    for (int i = 0; i < num_particles; i++) {
-        particles[i].px = rand() % width;
-        particles[i].py = rand() % height;
-        particles[i].vx = 0;
-        particles[i].vy = 0;
-        particles[i].density = 0;
-    }
+    std::vector<Particle> particles =
+        Particle::generate(
+            num_particles, width, height);
 
     GLuint pssbo;
     glGenBuffers(1, &pssbo);
@@ -157,7 +159,8 @@ int main() {
 
     int frames = 0;
 
-    while(!glfwWindowShouldClose(window)) {
+    while (!glfwWindowShouldClose(window))
+    {
         //_sleep(0); // Just for better viewing while debugging
         frames++;
 
@@ -198,7 +201,8 @@ int main() {
         glfwSwapBuffers(window);
         glfwPollEvents();
 
-        if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) glfwSetWindowShouldClose(window, GLFW_TRUE);
+        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+            glfwSetWindowShouldClose(window, GLFW_TRUE);
     }
 
     glDeleteProgram(shaderProg);
